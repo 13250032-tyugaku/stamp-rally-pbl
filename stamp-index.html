@@ -6,6 +6,8 @@
   <title>戸田市めぐり デジタルスタンプラリー</title>
   <!-- QRコード読み取り用ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- QRコード生成用ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --primary-color: #0076a3;
@@ -31,7 +33,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      padding-bottom: 84px; /* 下部タブバーと重ならないための余白 */
+      padding-bottom: 84px;
     }
 
     header {
@@ -53,11 +55,10 @@
       flex: 1;
     }
 
-    /* 画面切り替え制御 */
     .view-section { display: none; width: 100%; }
     .view-section.active { display: block; }
 
-    /* ===== 下部タブナビゲーション（全幅） ===== */
+    /* ===== 下部タブナビゲーション ===== */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -89,10 +90,7 @@
       transition: all 0.15s ease;
     }
 
-    .nav-tab-icon {
-      font-size: 1.4rem;
-      line-height: 1;
-    }
+    .nav-tab-icon { font-size: 1.4rem; line-height: 1; }
 
     .nav-tab.active {
       color: var(--primary-color);
@@ -110,18 +108,8 @@
       margin-bottom: 20px;
     }
 
-    .home-hero h2 {
-      font-size: 1.3rem;
-      color: var(--primary-color);
-      margin-bottom: 8px;
-    }
-
-    .home-hero p {
-      font-size: 0.95rem;
-      color: #555;
-      line-height: 1.5;
-      margin-bottom: 14px;
-    }
+    .home-hero h2 { font-size: 1.3rem; color: var(--primary-color); margin-bottom: 8px; }
+    .home-hero p { font-size: 0.95rem; color: #555; line-height: 1.5; margin-bottom: 14px; }
 
     .home-badge {
       display: inline-block;
@@ -150,20 +138,9 @@
       padding-left: 8px;
     }
 
-    .how-to-list {
-      list-style: none;
-      font-size: 0.9rem;
-      color: #555;
-      line-height: 1.6;
-    }
-
-    .how-to-list li {
-      margin-bottom: 8px;
-    }
-
-    .how-to-list li:last-child {
-      margin-bottom: 0;
-    }
+    .how-to-list { list-style: none; font-size: 0.9rem; color: #555; line-height: 1.6; }
+    .how-to-list li { margin-bottom: 8px; }
+    .how-to-list li:last-child { margin-bottom: 0; }
 
     .quick-action-btn {
       width: 100%;
@@ -183,12 +160,7 @@
     }
 
     /* ===== 2. スタンプ撮影タブ（QRスキャナー） ===== */
-    .tab-title {
-      font-size: 1.15rem;
-      color: var(--primary-color);
-      text-align: center;
-      margin-bottom: 14px;
-    }
+    .tab-title { font-size: 1.15rem; color: var(--primary-color); text-align: center; margin-bottom: 14px; }
 
     .scanner-box {
       position: relative;
@@ -201,12 +173,7 @@
       aspect-ratio: 1 / 1;
     }
 
-    #qrVideo {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+    #qrVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .scanner-guide {
       position: absolute;
@@ -253,11 +220,7 @@
       transition: width 0.3s ease;
     }
 
-    .progress-text {
-      font-size: 1.05rem;
-      font-weight: bold;
-      color: var(--primary-color);
-    }
+    .progress-text { font-size: 1.05rem; font-weight: bold; color: var(--primary-color); }
 
     .stamp-grid {
       display: grid;
@@ -317,11 +280,7 @@
 
     .spot-title { font-size: 1.25rem; color: var(--primary-color); }
 
-    .instruction-note {
-      font-size: 0.85rem;
-      color: #666;
-      margin: 14px 16px 6px;
-    }
+    .instruction-note { font-size: 0.85rem; color: #666; margin: 14px 16px 6px; }
 
     .description-box {
       height: 180px;
@@ -346,18 +305,8 @@
       gap: 10px;
     }
 
-    .checkbox-area label {
-      font-size: 0.95rem;
-      font-weight: bold;
-      color: #00567a;
-      cursor: pointer;
-    }
-
-    .checkbox-area input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-    }
+    .checkbox-area label { font-size: 0.95rem; font-weight: bold; color: #00567a; cursor: pointer; }
+    .checkbox-area input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
 
     .btn-container { padding: 0 16px 16px; }
 
@@ -376,12 +325,39 @@
     .stamp-btn:disabled { background-color: #ccc; cursor: not-allowed; }
     .stamp-btn.success { background-color: var(--secondary-color); }
 
-    .status-msg {
-      margin-top: 10px;
-      font-size: 0.9rem;
+    .status-msg { margin-top: 10px; font-size: 0.9rem; text-align: center; font-weight: bold; line-height: 1.4; }
+
+    /* ===== 5. QRコード一覧表示画面（?qr=1 で起動） ===== */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .qr-card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
       text-align: center;
-      font-weight: bold;
-      line-height: 1.4;
+      background: #fff;
+    }
+
+    .qr-card h3 {
+      font-size: 1rem;
+      color: var(--primary-color);
+      margin-bottom: 12px;
+    }
+
+    .qr-canvas-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .qr-url-text {
+      font-size: 0.72rem;
+      color: #666;
+      word-break: break-all;
     }
   </style>
 </head>
@@ -416,7 +392,7 @@
         </button>
       </section>
 
-      <!-- ② スタンプ撮影タブ（QRコードスキャナー） -->
+      <!-- ② スタンプ撮影タブ -->
       <section id="scannerView" class="view-section">
         <h2 class="tab-title">📷 QRコードを撮影して読み取る</h2>
         <div class="scanner-box">
@@ -429,7 +405,7 @@
         </p>
       </section>
 
-      <!-- ③ 記録確認タブ（スタンプ帳） -->
+      <!-- ③ 記録確認タブ -->
       <section id="bookView" class="view-section">
         <h2 class="tab-title">💮 集めたスタンプの記録</h2>
         <div class="progress-card">
@@ -442,7 +418,7 @@
         <div class="stamp-grid" id="stampGrid"></div>
       </section>
 
-      <!-- ④ スポット詳細＆スタンプ獲得画面（QR読取後に表示） -->
+      <!-- ④ スポット詳細＆スタンプ獲得画面 -->
       <section id="spotView" class="view-section">
         <div class="spot-card">
           <div class="spot-header">
@@ -467,6 +443,15 @@
           </div>
         </div>
       </section>
+
+      <!-- ⑤ QRコード一覧画面（?qr=1 で表示） -->
+      <section id="qrListView" class="view-section">
+        <h2 class="tab-title">📱 配布・読み取り用 QRコード一覧</h2>
+        <p class="scanner-note" style="margin-bottom: 16px;">
+          別のスマホの「📷 スタンプ撮影」タブでこの画面のQRコードを読み取ると、各スポットページが開きます。
+        </p>
+        <div class="qr-grid" id="qrGrid"></div>
+      </section>
     </main>
 
     <!-- 下部固定タブバー -->
@@ -487,7 +472,6 @@
   </div>
 
   <script>
-    // 戸田市の全8スポットデータ
     const SPOTS = [
       { id: 'heibei', category: 'グルメ', name: 'おにぎりや へいべい', icon: '🍙', lat: 35.8123, lng: 139.6820, desc: '戸田公園駅東口すぐのこだわりおにぎり専門店。厳選されたお米とパリッとした海苔、ふんわり握られた温かみのあるおにぎりが大人気です！' },
       { id: 'chinone', category: 'グルメ', name: '麺屋 茅根', icon: '🍜', lat: 35.8115, lng: 139.6795, desc: '戸田公園駅西口近くにあるラーメン・つけ麺の名店。味わい深い魚介豚骨スープとツルツルの自家製麺が絶品で、地元ファンから長年愛されています。' },
@@ -507,7 +491,8 @@
       home: document.getElementById('homeView'),
       scanner: document.getElementById('scannerView'),
       book: document.getElementById('bookView'),
-      spot: document.getElementById('spotView')
+      spot: document.getElementById('spotView'),
+      qrList: document.getElementById('qrListView')
     };
 
     const tabs = {
@@ -535,7 +520,7 @@
       return saved.filter(id => validIds.includes(id));
     }
 
-    // ===== ① ホームタブ表示 =====
+    // ===== ① ホームタブ =====
     function openHomeView() {
       const myStamps = getMyStamps();
       const percent = Math.round((myStamps.length / SPOTS.length) * 100);
@@ -544,7 +529,7 @@
       showView('home');
     }
 
-    // ===== ② スタンプ撮影タブ（QRスキャナー） =====
+    // ===== ② スタンプ撮影タブ =====
     const qrVideo = document.getElementById('qrVideo');
     const qrCanvas = document.getElementById('qrCanvas');
     const qrCtx = qrCanvas.getContext('2d', { willReadFrequently: true });
@@ -620,7 +605,7 @@
       }
     }
 
-    // ===== ③ 記録確認タブ（スタンプ帳） =====
+    // ===== ③ 記録確認タブ =====
     function openBookView() {
       window.history.replaceState({}, '', window.location.pathname);
       const myStamps = getMyStamps();
@@ -651,7 +636,7 @@
       showView('book');
     }
 
-    // ===== ④ スポット画面表示＆GPS判定 =====
+    // ===== ④ スポット画面＆GPS判定 =====
     const spotCategory = document.getElementById('spotCategory');
     const spotTitle = document.getElementById('spotTitle');
     const spotDescription = document.getElementById('spotDescription');
@@ -741,7 +726,7 @@
             currentSpot.lat,
             currentSpot.lng
           );
-          const ALLOWED_DISTANCE = 50; // 50m以内
+          const ALLOWED_DISTANCE = 50;
 
           if (distance <= ALLOWED_DISTANCE) {
             const myStamps = getMyStamps();
@@ -773,13 +758,43 @@
       );
     });
 
+    // ===== ⑤ QRコード一覧画面生成（?qr=1） =====
+    function openQrListView() {
+      const qrGrid = document.getElementById('qrGrid');
+      qrGrid.innerHTML = '';
+      const baseUrl = window.location.origin + window.location.pathname;
+
+      SPOTS.forEach(spot => {
+        const spotUrl = `${baseUrl}?spot=${spot.id}`;
+        const card = document.createElement('div');
+        card.className = 'qr-card';
+        card.innerHTML = `
+          <h3>${spot.icon} ${spot.name}</h3>
+          <div class="qr-canvas-wrap" id="qr_${spot.id}"></div>
+          <div class="qr-url-text">${spotUrl}</div>
+        `;
+        qrGrid.appendChild(card);
+
+        new QRCode(document.getElementById(`qr_${spot.id}`), {
+          text: spotUrl,
+          width: 160,
+          height: 160
+        });
+      });
+
+      showView('qrList');
+    }
+
     tabs.home.addEventListener('click', openHomeView);
     tabs.scanner.addEventListener('click', openScannerView);
     tabs.book.addEventListener('click', openBookView);
     document.getElementById('homeToScannerBtn').addEventListener('click', openScannerView);
 
-    const initialSpotId = new URLSearchParams(window.location.search).get('spot');
-    if (initialSpotId && SPOTS.some(s => s.id === initialSpotId)) {
+    const params = new URLSearchParams(window.location.search);
+    const initialSpotId = params.get('spot');
+    if (params.get('qr') === '1') {
+      openQrListView();
+    } else if (initialSpotId && SPOTS.some(s => s.id === initialSpotId)) {
       openSpotView(initialSpotId);
     } else {
       openHomeView();
