@@ -283,15 +283,15 @@
     .instruction-note { font-size: 0.85rem; color: #666; margin: 14px 16px 6px; }
 
     .description-box {
-      height: 180px;
-      overflow-y: scroll;
+      max-height: 220px;
+      overflow-y: auto;
       border: 2px dashed #bce0fd;
       background-color: #fafafa;
       margin: 0 16px 12px;
-      padding: 12px;
+      padding: 14px;
       border-radius: 8px;
       font-size: 0.95rem;
-      line-height: 1.6;
+      line-height: 1.65;
     }
 
     .checkbox-area {
@@ -306,7 +306,7 @@
     }
 
     .checkbox-area label { font-size: 0.95rem; font-weight: bold; color: #00567a; cursor: pointer; }
-    .checkbox-area input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+    .checkbox-area input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
 
     .btn-container { padding: 0 16px 16px; }
 
@@ -381,7 +381,7 @@
           <h3>スタンプの集め方</h3>
           <ul class="how-to-list">
             <li><strong>1.</strong> 下の<strong>「📷 スタンプ撮影」</strong>タブからQRコードを読み取ります。</li>
-            <li><strong>2.</strong> スポットの説明文を最後まで読んでチェックを入れます。</li>
+            <li><strong>2.</strong> スポットの説明文を読んでチェックを入れます。</li>
             <li><strong>3.</strong> 現地（50m以内）でボタンを押すとスタンプ獲得！</li>
           </ul>
         </div>
@@ -426,15 +426,15 @@
             <h2 class="spot-title" id="spotTitle">スポット名</h2>
           </div>
 
-          <p class="instruction-note">👇 下の説明文を最後までスクロールして読んでください。</p>
+          <p class="instruction-note" id="instructionNote">👇 下の説明文を読んでチェックを入れてください。</p>
 
           <div class="description-box" id="scrollBox">
             <div id="spotDescription"></div>
           </div>
 
           <div class="checkbox-area">
-            <input type="checkbox" id="readCheckbox" disabled>
-            <label for="readCheckbox" id="checkboxLabel">最後まで読むとチェックできます</label>
+            <input type="checkbox" id="readCheckbox">
+            <label for="readCheckbox" id="checkboxLabel">説明文を確認しました（チェックを入れる）</label>
           </div>
 
           <div class="btn-container">
@@ -641,10 +641,16 @@
     const spotTitle = document.getElementById('spotTitle');
     const spotDescription = document.getElementById('spotDescription');
     const scrollBox = document.getElementById('scrollBox');
+    const instructionNote = document.getElementById('instructionNote');
     const readCheckbox = document.getElementById('readCheckbox');
     const checkboxLabel = document.getElementById('checkboxLabel');
     const stampBtn = document.getElementById('stampBtn');
     const statusMsg = document.getElementById('statusMsg');
+
+    function enableCheckboxReady() {
+      readCheckbox.disabled = false;
+      checkboxLabel.textContent = '説明文を確認しました（チェックを入れる）';
+    }
 
     function openSpotView(spotId) {
       currentSpot = SPOTS.find(s => s.id === spotId) || SPOTS[0];
@@ -656,6 +662,8 @@
       scrollBox.scrollTop = 0;
       statusMsg.textContent = '';
 
+      showView('spot');
+
       const myStamps = getMyStamps();
       if (myStamps.includes(currentSpot.id)) {
         readCheckbox.checked = true;
@@ -666,14 +674,20 @@
         stampBtn.classList.add('success');
       } else {
         readCheckbox.checked = false;
-        readCheckbox.disabled = true;
-        checkboxLabel.textContent = '最後まで読むとチェックできます';
         stampBtn.disabled = true;
         stampBtn.textContent = 'チェックを入れると押せます';
         stampBtn.classList.remove('success');
-      }
 
-      showView('spot');
+        // 説明文が枠内に収まっている（スクロール不要な）場合は最初からチェック可能にする
+        if (scrollBox.scrollHeight <= scrollBox.clientHeight + 5) {
+          instructionNote.textContent = '👇 下の説明文を読んでチェックを入れてください。';
+          enableCheckboxReady();
+        } else {
+          instructionNote.textContent = '👇 下の説明文を最後までスクロールして読んでください。';
+          readCheckbox.disabled = true;
+          checkboxLabel.textContent = '最後まで読むとチェックできます';
+        }
+      }
     }
 
     function getDistanceInMeters(lat1, lon1, lat2, lon2) {
@@ -691,8 +705,7 @@
     scrollBox.addEventListener('scroll', () => {
       if (!currentSpot || getMyStamps().includes(currentSpot.id)) return;
       if (scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 20) {
-        readCheckbox.disabled = false;
-        checkboxLabel.textContent = '説明文を確認しました（チェックを入れる）';
+        enableCheckboxReady();
       }
     });
 
