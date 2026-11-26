@@ -49,6 +49,20 @@
 
     header h1 { font-size: 1.15rem; }
 
+    .demo-banner {
+      display: none;
+      width: 100%;
+      background-color: #fff3e0;
+      color: #e65100;
+      border-bottom: 1px solid #ffcc80;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .demo-banner.active { display: block; }
+
     main {
       width: 100%;
       padding: 20px 16px;
@@ -252,6 +266,22 @@
 
     .stamp-icon { font-size: 2rem; margin-bottom: 6px; }
 
+    .demo-reset-btn {
+      display: none;
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      border: 1px solid #e65100;
+      border-radius: 8px;
+      background-color: #fff3e0;
+      color: #e65100;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .demo-reset-btn.active { display: block; }
+
     /* ===== 4. スポット詳細＆スタンプ獲得画面 ===== */
     .spot-card {
       width: 100%;
@@ -367,6 +397,9 @@
     <header>
       <h1>戸田市めぐり デジタルスタンプラリー</h1>
     </header>
+    <div id="demoBanner" class="demo-banner">
+      🛠️ デモモード起動中（場所に関係なくスタンプ獲得できます）
+    </div>
 
     <main>
       <!-- ① ホームタブ -->
@@ -416,6 +449,10 @@
         </div>
 
         <div class="stamp-grid" id="stampGrid"></div>
+
+        <button id="demoResetBtn" class="demo-reset-btn">
+          🔄 デモ用：獲得スタンプをすべてリセット
+        </button>
       </section>
 
       <!-- ④ スポット詳細＆スタンプ獲得画面 -->
@@ -483,6 +520,22 @@
       { id: 'hanabi', category: 'イベント', name: '戸田橋花火大会', icon: '🎆', lat: 35.8030, lng: 139.6840, desc: '荒川を挟んで板橋区と同時開催される大迫力の花火大会。夜空を彩る大輪の花火と伝統の尺玉が、感動的な思い出を演出します。' }
     ];
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const isDemoMode = urlParams.get('demo') === '1';
+
+    if (isDemoMode) {
+      document.getElementById('demoBanner').classList.add('active');
+      document.getElementById('demoResetBtn').classList.add('active');
+    }
+
+    function buildQuery(extraParams = {}) {
+      const q = new URLSearchParams();
+      if (isDemoMode) q.set('demo', '1');
+      Object.entries(extraParams).forEach(([k, v]) => q.set(k, v));
+      const str = q.toString();
+      return str ? `?${str}` : window.location.pathname;
+    }
+
     let currentSpot = null;
     let videoStream = null;
     let scanningActive = false;
@@ -525,7 +578,7 @@
       const myStamps = getMyStamps();
       const percent = Math.round((myStamps.length / SPOTS.length) * 100);
       document.getElementById('homeCountBadge').textContent = `達成率: ${percent}%（${myStamps.length} / ${SPOTS.length}個）`;
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, '', buildQuery());
       showView('home');
     }
 
@@ -536,7 +589,7 @@
     const scannerStatus = document.getElementById('scannerStatus');
 
     async function openScannerView() {
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, '', buildQuery());
       showView('scanner');
       scannerStatus.style.color = '#555';
       scannerStatus.innerHTML = 'カメラを起動しています...<br>許可を求められたら「許可」を押してください。';
@@ -591,7 +644,7 @@
         const scannedUrl = new URL(data);
         const spotId = scannedUrl.searchParams.get('spot');
         if (spotId && SPOTS.some(s => s.id === spotId)) {
-          window.history.replaceState({}, '', `?spot=${spotId}`);
+          window.history.replaceState({}, '', buildQuery({ spot: spotId }));
           openSpotView(spotId);
           return;
         }
@@ -607,7 +660,7 @@
 
     // ===== ③ 記録確認タブ =====
     function openBookView() {
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, '', buildQuery());
       const myStamps = getMyStamps();
       const count = myStamps.length;
       const total = SPOTS.length;
@@ -635,6 +688,11 @@
 
       showView('book');
     }
+
+    document.getElementById('demoResetBtn').addEventListener('click', () => {
+      localStorage.removeItem('toda_my_stamps');
+      openBookView();
+    });
 
     // ===== ④ スポット画面＆GPS判定 =====
     const spotCategory = document.getElementById('spotCategory');
@@ -678,7 +736,6 @@
         stampBtn.textContent = 'チェックを入れると押せます';
         stampBtn.classList.remove('success');
 
-        // 説明文が枠内に収まっている（スクロール不要な）場合は最初からチェック可能にする
         if (scrollBox.scrollHeight <= scrollBox.clientHeight + 5) {
           instructionNote.textContent = '👇 下の説明文を読んでチェックを入れてください。';
           enableCheckboxReady();
@@ -688,6 +745,21 @@
           checkboxLabel.textContent = '最後まで読むとチェックできます';
         }
       }
+    }
+
+    function completeStampAcquisition(messageText) {
+      const myStamps = getMyStamps();
+      if (!myStamps.includes(currentSpot.id)) {
+        myStamps.push(currentSpot.id);
+        localStorage.setItem('toda_my_stamps', JSON.stringify(myStamps));
+      }
+      statusMsg.style.color = 'green';
+      statusMsg.textContent = messageText;
+      readCheckbox.disabled = true;
+      checkboxLabel.textContent = '説明を確認済みです';
+      stampBtn.disabled = true;
+      stampBtn.textContent = '獲得済みです';
+      stampBtn.classList.add('success');
     }
 
     function getDistanceInMeters(lat1, lon1, lat2, lon2) {
@@ -723,6 +795,13 @@
     stampBtn.addEventListener('click', () => {
       if (!currentSpot) return;
       stampBtn.disabled = true;
+
+      // デモモード時はGPS判定をスキップして即獲得
+      if (isDemoMode) {
+        completeStampAcquisition('🎉 デモモードでスタンプを獲得しました！下の「記録確認」タブから確認できます！');
+        return;
+      }
+
       stampBtn.textContent = '位置情報を確認中...';
 
       if (!navigator.geolocation) {
@@ -742,18 +821,7 @@
           const ALLOWED_DISTANCE = 50;
 
           if (distance <= ALLOWED_DISTANCE) {
-            const myStamps = getMyStamps();
-            if (!myStamps.includes(currentSpot.id)) {
-              myStamps.push(currentSpot.id);
-              localStorage.setItem('toda_my_stamps', JSON.stringify(myStamps));
-            }
-            statusMsg.style.color = 'green';
-            statusMsg.textContent = `🎉 現地チェックイン成功！（距離: 約${Math.round(distance)}m）下の「記録確認」タブから確認できます！`;
-            readCheckbox.disabled = true;
-            checkboxLabel.textContent = '説明を確認済みです';
-            stampBtn.disabled = true;
-            stampBtn.textContent = '獲得済みです';
-            stampBtn.classList.add('success');
+            completeStampAcquisition(`🎉 現地チェックイン成功！（距離: 約${Math.round(distance)}m）下の「記録確認」タブから確認できます！`);
           } else {
             statusMsg.style.color = 'red';
             statusMsg.textContent = `📍 スポットから離れています（現在地から約${Math.round(distance)}m）。50m以内に近づいて押してください。`;
@@ -803,9 +871,8 @@
     tabs.book.addEventListener('click', openBookView);
     document.getElementById('homeToScannerBtn').addEventListener('click', openScannerView);
 
-    const params = new URLSearchParams(window.location.search);
-    const initialSpotId = params.get('spot');
-    if (params.get('qr') === '1') {
+    const initialSpotId = urlParams.get('spot');
+    if (urlParams.get('qr') === '1') {
       openQrListView();
     } else if (initialSpotId && SPOTS.some(s => s.id === initialSpotId)) {
       openSpotView(initialSpotId);
